@@ -1,0 +1,10 @@
+# Football Prediction & Polymarket Research Dashboard — Phase 1 (MVP)
+# Deliberately a small, pure-Python dependency set. No heavy ML libraries:
+# the Poisson/Elo models use only the standard library so the app starts fast
+# and stays easy to audit.
+Flask==3.1.0
+requests==2.32.3
+python-dotenv==1.0.1
+
+# Dev / testing only
+pytest==8.3.4

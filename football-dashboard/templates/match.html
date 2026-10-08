@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Match detail{% endblock %}
+{% block content %}
+
+{% if detail is none %}
+  <div class="banner warn">Fixture {{ fixture_id }} is not in the current analysis window.
+    <a href="{{ url_for('index') }}">Back to dashboard</a>.</div>
+{% else %}
+<a class="back" href="{{ url_for('index') }}">← All matches</a>
+<h1 class="match-title">{{ detail.home_team }} <span class="vs">vs</span> {{ detail.away_team }}</h1>
+<div class="muted">{{ detail.league }} · {{ to_local(detail.kickoff_utc) }}</div>
+
+<div class="grid-3">
+  <div class="panel">
+    <h3>Prediction (model)</h3>
+    <table class="kv">
+      <tr><td>Home</td><td>{{ detail.model.home }}%</td></tr>
+      <tr><td>Draw</td><td>{{ detail.model.draw }}%</td></tr>
+      <tr><td>Away</td><td>{{ detail.model.away }}%</td></tr>
+    </table>
+  </div>
+  <div class="panel">
+    <h3>Market (Polymarket)</h3>
+    {% if detail.market %}
+    <table class="kv">
+      <tr><td>Home</td><td>{{ detail.market.get('home','N/A') }}{% if detail.market.get('home') %}%{% endif %}</td></tr>
+      <tr><td>Draw</td><td>{{ detail.market.get('draw','N/A') }}{% if detail.market.get('draw') %}%{% endif %}</td></tr>
+      <tr><td>Away</td><td>{{ detail.market.get('away','N/A') }}{% if detail.market.get('away') %}%{% endif %}</td></tr>
+    </table>
+    <div class="small muted">Match confidence: {{ detail.match_confidence }}% · Liquidity {{ detail.liquidity_label }} · Spread {{ detail.spread_label }}</div>
+    {% else %}
+    <div class="na-block">{{ detail.market_status }}</div>
+    {% endif %}
+  </div>
+  <div class="panel">
+    <h3>Edge</h3>
+    {% if detail.edge %}
+    <table class="kv">
+      {% for o in ['home','draw','away'] %}{% if o in detail.edge %}
+      <tr><td>{{ o|capitalize }}</td>
+        <td><span class="edge {{ 'pos' if detail.edge[o]>0 else 'neg' }}">{{ '%+.1f'|format(detail.edge[o]) }} pp</span></td></tr>
+      {% endif %}{% endfor %}
+    </table>
+    {% else %}<div class="na-block">N/A — no matched market</div>{% endif %}
+    <div class="result-box">
+      <div><span class="lbl">Confidence</span><span class="pill conf-{{ 'hi' if detail.confidence>=75 else ('mid' if detail.confidence>=55 else 'lo') }}">{{ detail.confidence }}/100</span></div>
+      <div><span class="lbl">Data quality</span><span>{{ detail.data_quality }}</span></div>
+      <div><span class="lbl">Signal</span><span class="pill sig-{{ detail.signal_quality|lower }}">{{ detail.signal_quality }}</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <h3>Model components</h3>
+    <p class="small muted">Weighted blend (weights renormalised over available models). This is why the model arrives at its number.</p>
+    <table class="kv wide">
+      <thead><tr><th>Model</th><th>Home</th><th>Draw</th><th>Away</th><th>Weight</th></tr></thead>
+      {% for name, dist in detail.components.items() %}
+      <tr><td>{{ name|capitalize }}</td>
+        <td>{{ (dist.home*100)|round(1) }}%</td>
+        <td>{{ (dist.draw*100)|round(1) }}%</td>
+        <td>{{ (dist.away*100)|round(1) }}%</td>
+        <td>{{ (detail.weights_used.get(name,0)*100)|round(0) }}%</td></tr>
+      {% endfor %}
+    </table>
+    {% if detail.poisson_detail %}
+    <div class="small muted">Poisson λ: home {{ detail.poisson_detail.lambda_home }}, away {{ detail.poisson_detail.lambda_away }}
+      · O2.5 {{ (detail.poisson_detail.over25*100)|round(0) }}% · BTTS {{ (detail.poisson_detail.btts*100)|round(0) }}%</div>
+    {% endif %}
+    {% if detail.injuries_present %}<div class="small">Injury adjustment applied.</div>
+    {% else %}<div class="small muted">Injury data unavailable — no adjustment made.</div>{% endif %}
+  </div>
+
+  <div class="panel">
+    <h3>Form &amp; ratings</h3>
+    <table class="kv wide">
+      <thead><tr><th></th><th>{{ detail.home_team }}</th><th>{{ detail.away_team }}</th></tr></thead>
+      <tr><td>Form (last 10)</td><td>{{ detail.form.home.form_string or '—' }}</td><td>{{ detail.form.away.form_string or '—' }}</td></tr>
+      <tr><td>PPG</td><td>{{ detail.form.home.ppg }}</td><td>{{ detail.form.away.ppg }}</td></tr>
+      <tr><td>GF/GA</td><td>{{ detail.form.home.gf }}/{{ detail.form.home.ga }}</td><td>{{ detail.form.away.gf }}/{{ detail.form.away.ga }}</td></tr>
+      <tr><td>Home/Away PPG</td><td>{{ detail.form.home_at_home.ppg }} (H)</td><td>{{ detail.form.away_at_away.ppg }} (A)</td></tr>
+      <tr><td>xG</td><td>{{ detail.form.home.xg if detail.form.home.xg is not none else 'N/A' }}</td><td>{{ detail.form.away.xg if detail.form.away.xg is not none else 'N/A' }}</td></tr>
+      <tr><td>Elo</td><td>{{ detail.elo.home }}</td><td>{{ detail.elo.away }}</td></tr>
+    </table>
+  </div>
+</div>
+
+{% if detail.polymarket_market_id %}
+<div class="panel">
+  <h3>Polymarket price history</h3>
+  <canvas id="price-chart" height="90"></canvas>
+  <div class="small muted" id="price-empty" style="display:none">No stored price points yet — history builds up as the app runs.</div>
+</div>
+<script>window.__MARKET_ID__ = {{ detail.polymarket_market_id|tojson }};</script>
+{% endif %}
+{% endif %}
+{% endblock %}

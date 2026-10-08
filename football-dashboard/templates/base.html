@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Football Market Analyzer{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">⚽</span>
+      <div>
+        <div class="brand-title">FOOTBALL MARKET ANALYZER</div>
+        <div class="brand-sub">Next {{ settings.lookahead_hours if settings else 48 }} hours · Polymarket edge research</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="{{ url_for('index') }}">Dashboard</a>
+      <a href="{{ url_for('performance') }}">Performance</a>
+      <a href="{{ url_for('backtest_page') }}">Backtest</a>
+      <a href="{{ url_for('settings_page') }}">Settings</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <span>Model {{ model_version }} · Times in {{ timezone }}</span>
+    <span class="disclaimer">MODEL ESTIMATE — NOT GUARANTEED. Research/paper-trading only. No real orders are placed.</span>
+  </footer>
+  <script>window.__REFRESH__ = {{ refresh_markets_seconds }};</script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
