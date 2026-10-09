@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Model performance{% endblock %}
+{% block content %}
+<h1>Model performance</h1>
+<p class="muted">Calibration of stored predictions that have since been settled. In each bucket the "actual" win rate should track the "predicted" probability for a well-calibrated model.</p>
+
+{% if perf.n == 0 %}
+<div class="banner info">No settled predictions yet. Predictions are stored on every dashboard run; once their matches finish and results are recorded, calibration appears here. You can also run the <a href="{{ url_for('backtest_page') }}">Backtest</a> over historical data.</div>
+{% else %}
+<div class="stat-row">
+  <div class="stat"><div class="stat-v">{{ perf.n }}</div><div class="stat-l">Predictions</div></div>
+  <div class="stat"><div class="stat-v">{{ (perf.accuracy*100)|round(1) }}%</div><div class="stat-l">Pick accuracy</div></div>
+  <div class="stat"><div class="stat-v">{{ perf.brier }}</div><div class="stat-l">Brier</div></div>
+  <div class="stat"><div class="stat-v">{{ perf.log_loss }}</div><div class="stat-l">Log loss</div></div>
+  <div class="stat"><div class="stat-v">{{ perf.ece }}</div><div class="stat-l">ECE</div></div>
+  <div class="stat"><div class="stat-v">{{ perf.avg_confidence or 'N/A' }}</div><div class="stat-l">Avg confidence</div></div>
+</div>
+<div class="panel">
+  <h3>Probability buckets (calibration)</h3>
+  <table class="kv wide">
+    <thead><tr><th>Range</th><th>Predicted</th><th>Actual</th><th>N</th></tr></thead>
+    {% for b in perf.buckets %}
+    <tr><td>{{ b.range }}</td><td>{{ b.predicted }}%</td><td>{{ b.actual }}%</td><td>{{ b.n }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

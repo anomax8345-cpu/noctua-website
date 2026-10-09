@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Match detail{% endblock %}
+{% block content %}
+
+{% if detail is none %}
+  <div class="banner warn">Fixture {{ fixture_id }} is not in the current analysis window.
+    <a href="{{ url_for('index') }}">Back to dashboard</a>.</div>
+{% else %}
+<a class="back" href="{{ url_for('index') }}">← All matches</a>
+<h1 class="match-title">{{ detail.p1_name }} <span class="vs">vs</span> {{ detail.p2_name }}</h1>
+<div class="muted">{{ detail.tour }} · {{ detail.tournament }} · {{ detail.round }} · {{ detail.surface }} · Bo{{ detail.best_of }} · {{ to_local(detail.kickoff_utc) }}</div>
+
+<div class="grid-3">
+  <div class="panel">
+    <h3>Prediction (model)</h3>
+    <table class="kv">
+      <tr><td>{{ detail.p1_name }}</td><td>{{ detail.model.p1 }}%</td></tr>
+      <tr><td>{{ detail.p2_name }}</td><td>{{ detail.model.p2 }}%</td></tr>
+    </table>
+  </div>
+  <div class="panel">
+    <h3>Market (Polymarket)</h3>
+    {% if detail.market %}
+    <table class="kv">
+      <tr><td>{{ detail.p1_name }}</td><td>{{ detail.market.p1 }}%</td></tr>
+      <tr><td>{{ detail.p2_name }}</td><td>{{ detail.market.p2 }}%</td></tr>
+    </table>
+    <div class="small muted">Match confidence: {{ detail.match_confidence }}% · Liquidity {{ detail.liquidity_label }} · Spread {{ detail.spread_label }}</div>
+    {% else %}<div class="na-block">{{ detail.market_status }}</div>{% endif %}
+  </div>
+  <div class="panel">
+    <h3>Edge</h3>
+    {% if detail.edge %}
+    <table class="kv">
+      <tr><td>{{ detail.p1_name }}</td><td><span class="edge {{ 'pos' if detail.edge.p1>0 else 'neg' }}">{{ '%+.1f'|format(detail.edge.p1) }} pp</span></td></tr>
+      <tr><td>{{ detail.p2_name }}</td><td><span class="edge {{ 'pos' if detail.edge.p2>0 else 'neg' }}">{{ '%+.1f'|format(detail.edge.p2) }} pp</span></td></tr>
+    </table>
+    {% else %}<div class="na-block">N/A — no matched market</div>{% endif %}
+    <div class="result-box">
+      <div><span class="lbl">Confidence</span><span class="pill conf-{{ 'hi' if detail.confidence>=75 else ('mid' if detail.confidence>=55 else 'lo') }}">{{ detail.confidence }}/100</span></div>
+      <div><span class="lbl">Data quality</span><span>{{ detail.data_quality }}</span></div>
+      <div><span class="lbl">Signal</span><span class="pill sig-{{ detail.signal_quality|lower }}">{{ detail.signal_quality }}</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <h3>Model components</h3>
+    <p class="small muted">Weighted blend (weights renormalised over available models).</p>
+    <table class="kv wide">
+      <thead><tr><th>Model</th><th>{{ detail.p1_name }}</th><th>{{ detail.p2_name }}</th><th>Weight</th></tr></thead>
+      {% for name, dist in detail.components.items() %}
+      <tr><td>{{ name|replace('_',' ')|capitalize }}</td>
+        <td>{{ (dist.p1*100)|round(1) }}%</td>
+        <td>{{ (dist.p2*100)|round(1) }}%</td>
+        <td>{{ (detail.weights_used.get(name,0)*100)|round(0) }}%</td></tr>
+      {% endfor %}
+    </table>
+    <div class="small muted">Serve model: P({{ detail.p1_name }} wins a set) {{ (detail.points_detail.set_prob_p1*100)|round(0) }}%
+      · calibrated serve pts/won {{ (detail.points_detail.spw1*100)|round(0) }}% / {{ (detail.points_detail.spw2*100)|round(0) }}%</div>
+  </div>
+
+  <div class="panel">
+    <h3>Form, ratings &amp; H2H</h3>
+    <table class="kv wide">
+      <thead><tr><th></th><th>{{ detail.p1_name }}</th><th>{{ detail.p2_name }}</th></tr></thead>
+      <tr><td>Form (last 15)</td><td>{{ detail.form.p1.form_string or '—' }}</td><td>{{ detail.form.p2.form_string or '—' }}</td></tr>
+      <tr><td>Win %</td><td>{{ detail.form.p1.win_pct }}%</td><td>{{ detail.form.p2.win_pct }}%</td></tr>
+      <tr><td>Win % ({{ detail.surface }})</td><td>{{ detail.form.p1_surface.win_pct }}%</td><td>{{ detail.form.p2_surface.win_pct }}%</td></tr>
+      <tr><td>Elo (blended)</td><td>{{ detail.elo.p1 }}</td><td>{{ detail.elo.p2 }}</td></tr>
+      <tr><td>Elo (overall)</td><td>{{ detail.elo.p1_overall }}</td><td>{{ detail.elo.p2_overall }}</td></tr>
+      <tr><td>H2H</td>
+        {% if detail.h2h %}<td>{{ detail.h2h.p1_wins }}</td><td>{{ detail.h2h.p2_wins }}</td>
+        {% else %}<td colspan="2">N/A</td>{% endif %}</tr>
+    </table>
+  </div>
+</div>
+
+{% if detail.polymarket_market_id %}
+<div class="panel">
+  <h3>Polymarket price history</h3>
+  <canvas id="price-chart" height="90"></canvas>
+  <div class="small muted" id="price-empty" style="display:none">No stored price points yet — history builds up as the app runs.</div>
+</div>
+<script>window.__MARKET_ID__ = {{ detail.polymarket_market_id|tojson }};</script>
+{% endif %}
+{% endif %}
+{% endblock %}

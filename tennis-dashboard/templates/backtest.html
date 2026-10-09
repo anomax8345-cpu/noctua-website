@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Backtest{% endblock %}
+{% block content %}
+<h1>Backtesting</h1>
+<p class="muted">
+  The engine replays historical matches in chronological order and predicts each
+  using <strong>only data available before it was played</strong> (Elo overall + surface
+  updated after each result, form/H2H from prior matches only) — no data leakage.
+</p>
+<pre class="code">python -m backtest.run --start 2025-01-01 --end 2026-10-01</pre>
+
+{% if last %}
+<div class="stat-row">
+  <div class="stat"><div class="stat-v">{{ last.n_matches }}</div><div class="stat-l">Matches</div></div>
+  <div class="stat"><div class="stat-v">{{ last.brier }}</div><div class="stat-l">Brier</div></div>
+  <div class="stat"><div class="stat-v">{{ last.log_loss }}</div><div class="stat-l">Log loss</div></div>
+  <div class="stat"><div class="stat-v">{{ (last.accuracy*100)|round(1) if last.accuracy is not none else 'N/A' }}%</div><div class="stat-l">Accuracy</div></div>
+  <div class="stat"><div class="stat-v">{{ last.ece }}</div><div class="stat-l">ECE</div></div>
+  <div class="stat"><div class="stat-v">{{ (last.roi*100)|round(1) if last.roi is not none else 'N/A' }}%</div><div class="stat-l">Paper ROI</div></div>
+  <div class="stat"><div class="stat-v">{{ (last.win_rate*100)|round(1) if last.win_rate is not none else 'N/A' }}%</div><div class="stat-l">Win rate</div></div>
+  <div class="stat"><div class="stat-v">{{ last.avg_edge if last.avg_edge is not none else 'N/A' }}</div><div class="stat-l">Avg edge (pp)</div></div>
+</div>
+<div class="muted small">Last run: {{ last.run_utc }} · {{ last.model_version }} · {{ last.start_date }} → {{ last.end_date }}</div>
+{% else %}
+<div class="banner info">No backtest has been run yet.</div>
+{% endif %}
+{% endblock %}

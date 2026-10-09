@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if not data.status.tennis_ok %}
+  <div class="banner warn">
+    ⚠️ Live tennis data unavailable.
+    {% for m in data.status.messages %}<div class="small">{{ m }}</div>{% endfor %}
+    <div class="small">Set your API-Tennis key on the <a href="{{ url_for('settings_page') }}">Settings</a> page.</div>
+  </div>
+{% endif %}
+{% if not data.status.markets_ok %}
+  <div class="banner info">ℹ️ Polymarket data unavailable right now — model runs anyway; market &amp; edge show as N/A.</div>
+{% endif %}
+
+<section class="headline">
+  <div>
+    <h1>Next 48 hours</h1>
+    <div class="muted">Last update: {{ now }}</div>
+  </div>
+  <div class="controls">
+    <input type="search" id="search" placeholder="Search player / tournament…">
+    <select id="tour-filter">
+      <option value="">All tours</option>
+      {% for t in tours %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+    </select>
+    <select id="surface-filter">
+      <option value="">All surfaces</option>
+      {% for s in surfaces %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
+    <label class="chk"><input type="checkbox" id="f-edge3"> Edge &gt; 3pp</label>
+    <label class="chk"><input type="checkbox" id="f-edge5"> Edge &gt; 5pp</label>
+    <label class="chk"><input type="checkbox" id="f-conf"> High confidence</label>
+    <label class="chk"><input type="checkbox" id="f-liq"> High liquidity</label>
+  </div>
+</section>
+
+{% set top = data.matches | selectattr('edge_top') | list %}
+{% if top %}
+<section>
+  <h2 class="section-title">Top potential edges</h2>
+  <div class="cards">
+    {% for m in top[:6] %}
+    {% set pick_name = m.p1_name if m.top_pick=='p1' else m.p2_name %}
+    <a class="card edge-card" href="{{ url_for('match_detail', fixture_id=m.fixture_id) }}">
+      <div class="card-league">{{ m.tour }} · {{ m.surface }}</div>
+      <div class="card-match">{{ m.p1_name }} <span class="vs">vs</span> {{ m.p2_name }}</div>
+      <div class="card-rows">
+        <div><span class="lbl">Model ({{ pick_name }})</span><span>{{ m.model[m.top_pick] }}%</span></div>
+        <div><span class="lbl">Market</span><span>{% if m.market %}{{ m.market[m.top_pick] }}%{% else %}N/A{% endif %}</span></div>
+        <div><span class="lbl">Edge</span><span class="edge {{ 'pos' if m.edge_top>0 else 'neg' }}">{{ '%+.1f'|format(m.edge_top) }} pp</span></div>
+      </div>
+      <div class="card-foot">
+        <span class="pill conf-{{ 'hi' if m.confidence>=75 else ('mid' if m.confidence>=55 else 'lo') }}">Conf {{ m.confidence }}</span>
+        <span class="pill">{{ m.liquidity_label }} liq</span>
+        <span class="pill sig-{{ m.signal_quality|lower }}">{{ m.signal_quality }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section>
+  <h2 class="section-title">All matches ({{ data.matches|length }})</h2>
+  <table class="matches" id="matches-table">
+    <thead>
+      <tr><th>Time</th><th>Tour</th><th>Surface</th><th>Match</th>
+          <th>Model</th><th>Market</th><th>Edge</th><th>Conf</th><th>Liq</th><th>Signal</th></tr>
+    </thead>
+    <tbody>
+      {% for m in data.matches %}
+      {% set pick_name = m.p1_name if m.top_pick=='p1' else m.p2_name %}
+      <tr class="match-row"
+          data-tour="{{ m.tour }}" data-surface="{{ m.surface }}"
+          data-edge="{{ m.edge_top if m.edge_top is not none else 0 }}"
+          data-conf="{{ m.confidence }}" data-liq="{{ m.liquidity_label }}"
+          data-text="{{ (m.p1_name ~ ' ' ~ m.p2_name ~ ' ' ~ m.tournament)|lower }}"
+          onclick="window.location='{{ url_for('match_detail', fixture_id=m.fixture_id) }}'">
+        <td class="nowrap">{{ to_local(m.kickoff_utc) }}</td>
+        <td class="muted">{{ m.tour }}</td>
+        <td class="muted">{{ m.surface }}</td>
+        <td class="match-cell">{{ m.p1_name }} <span class="vs">–</span> {{ m.p2_name }}</td>
+        <td><strong>{{ pick_name }} {{ m.model[m.top_pick] }}%</strong></td>
+        <td>{% if m.market %}{{ m.market[m.top_pick] }}%{% else %}<span class="na">{{ m.market_status }}</span>{% endif %}</td>
+        <td>{% if m.edge_top is not none %}<span class="edge {{ 'pos' if m.edge_top>0 else 'neg' }}">{{ '%+.1f'|format(m.edge_top) }}</span>{% else %}<span class="na">N/A</span>{% endif %}</td>
+        <td><span class="pill conf-{{ 'hi' if m.confidence>=75 else ('mid' if m.confidence>=55 else 'lo') }}">{{ m.confidence }}</span></td>
+        <td>{{ m.liquidity_label }}</td>
+        <td><span class="pill sig-{{ m.signal_quality|lower }}">{{ m.signal_quality }}</span></td>
+      </tr>
+      {% endfor %}
+      {% if not data.matches %}
+      <tr><td colspan="10" class="empty">No matches in the next {{ settings.lookahead_hours }} hours
+        {% if not data.status.tennis_ok %}— configure your API key to load data.{% else %}for the enabled tours.{% endif %}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

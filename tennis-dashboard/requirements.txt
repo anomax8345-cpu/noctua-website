@@ -1,0 +1,9 @@
+# Tennis Prediction & Polymarket Research Dashboard — Phase 1 (MVP)
+# Small, pure-Python dependency set. The Elo / serve-points models use only the
+# standard library so the app starts fast and stays easy to audit.
+Flask==3.1.0
+requests==2.32.3
+python-dotenv==1.0.1
+
+# Dev / testing only
+pytest==8.3.4
